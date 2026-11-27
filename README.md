@@ -56,6 +56,8 @@ Then in **Roblox Studio**:
 > If you get "rojo is not recognized", close PowerShell, open a new one, `cd C:\RobloxDev\roblox-executions`, and try again.
 >
 > If Studio doesn't show the Rojo button, restart Studio after step 5.
+>
+> **The Rojo version in Studio must match the one in `rokit.toml` (currently 7.7.1).** If Connect fails with a `protocolVersion` or version mismatch error, check the version shown in the Rojo plugin window. Either change the number in `rokit.toml` to match it and run `rokit install` again, or run `rojo plugin install` so the plugin matches the server. Only keep one Rojo plugin installed (don't mix the Creator Store one with `rojo plugin install`).
 
 Next time you only need to `cd C:\RobloxDev\roblox-executions`, run `rojo serve`, and click Connect in Studio.
 
