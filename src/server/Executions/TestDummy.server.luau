@@ -13,7 +13,11 @@ local SPAWN_POSITION = Vector3.new(0, 5, -20)
 local RESPAWN_DELAY = 3
 
 local function spawnDummy()
-	local dummy = Players:CreateHumanoidModelFromDescription(Instance.new("HumanoidDescription"), Enum.HumanoidRigType.R15)
+	local description = Instance.new("HumanoidDescription")
+	description.TorsoColor = Color3.fromRGB(40, 70, 120)
+	description.LeftLegColor = Color3.fromRGB(50, 45, 40)
+	description.RightLegColor = Color3.fromRGB(50, 45, 40)
+	local dummy = Players:CreateHumanoidModelFromDescription(description, Enum.HumanoidRigType.R6)
 	dummy.Name = "Test Dummy"
 	dummy:PivotTo(CFrame.new(SPAWN_POSITION))
 	dummy.Parent = workspace
