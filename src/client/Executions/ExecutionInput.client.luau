@@ -1,21 +1,30 @@
 -- ExecutionInput.client.luau
--- Press E near another character (or the Test Dummy) to execute them.
--- Also plays camera shake when the server says an execution hit.
+-- Walk up to another character (or the Test Dummy) and press:
+--   E       = a random execution
+--   1, 2, 3 = a specific one (same order as Registry.Order)
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
-local Registry = require(ReplicatedStorage.Shared.Executions.Registry)
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Registry = require(Shared.Executions.Registry)
 
 local player = Players.LocalPlayer
-local remotes = ReplicatedStorage:WaitForChild("Remotes")
-local requestExecution = remotes:WaitForChild("RequestExecution")
-local executionFx = remotes:WaitForChild("ExecutionFx")
+local requestExecution = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("RequestExecution")
 
-local EXECUTION_KEY = Enum.KeyCode.E
-local EXECUTION_ID = "Chain"
+local RANDOM_KEY = Enum.KeyCode.E
+local NUMBER_KEYS = {
+	Enum.KeyCode.One,
+	Enum.KeyCode.Two,
+	Enum.KeyCode.Three,
+	Enum.KeyCode.Four,
+	Enum.KeyCode.Five,
+	Enum.KeyCode.Six,
+	Enum.KeyCode.Seven,
+	Enum.KeyCode.Eight,
+	Enum.KeyCode.Nine,
+}
 
 -- Find the closest living character in range (not ourselves)
 local function findNearestTarget(range: number): Model?
@@ -41,42 +50,48 @@ local function findNearestTarget(range: number): Model?
 	return nearest
 end
 
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-	if gameProcessed or input.KeyCode ~= EXECUTION_KEY then
-		return
-	end
-	local target = findNearestTarget(Registry[EXECUTION_ID].Range)
+local function tryExecution(id: string)
+	local move = Registry.Moves[id]
+	local target = move and findNearestTarget(move.Range)
 	if target then
-		requestExecution:FireServer(EXECUTION_ID, target)
+		requestExecution:FireServer(id, target)
 	end
-end)
-
--- Simple camera shake
-local function shakeCamera(strength: number, duration: number)
-	local camera = workspace.CurrentCamera
-	local elapsed = 0
-	local connection
-	connection = RunService.RenderStepped:Connect(function(dt)
-		elapsed += dt
-		if elapsed >= duration then
-			connection:Disconnect()
-			return
-		end
-		local fade = 1 - elapsed / duration
-		local offset = Vector3.new(math.random() - 0.5, math.random() - 0.5, 0) * strength * fade
-		camera.CFrame *= CFrame.new(offset)
-	end)
 end
 
-executionFx.OnClientEvent:Connect(function(name, killer, victim)
-	-- Only shake for people involved in the execution
-	local character = player.Character
-	if character ~= killer and character ~= victim then
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	if gameProcessed then
 		return
 	end
-	if name == "Hook" then
-		shakeCamera(0.4, 0.2)
-	elseif name == "Slam" then
-		shakeCamera(1.2, 0.4)
+	if input.KeyCode == RANDOM_KEY then
+		tryExecution(Registry.Order[math.random(#Registry.Order)])
+		return
+	end
+	local index = table.find(NUMBER_KEYS, input.KeyCode)
+	if index and Registry.Order[index] then
+		tryExecution(Registry.Order[index])
 	end
 end)
+
+-- Small help text in the corner
+local lines = { "E  random execution" }
+for i, id in Registry.Order do
+	table.insert(lines, `{i}  {Registry.Moves[id].DisplayName}`)
+end
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "ExecutionHelp"
+gui.ResetOnSpawn = false
+local label = Instance.new("TextLabel")
+label.AnchorPoint = Vector2.new(0, 1)
+label.Position = UDim2.new(0, 12, 1, -12)
+label.Size = UDim2.fromOffset(220, 20 * #lines)
+label.BackgroundTransparency = 1
+label.TextXAlignment = Enum.TextXAlignment.Left
+label.TextYAlignment = Enum.TextYAlignment.Bottom
+label.TextColor3 = Color3.fromRGB(220, 200, 200)
+label.TextStrokeTransparency = 0.5
+label.Font = Enum.Font.GothamMedium
+label.TextSize = 16
+label.Text = table.concat(lines, "\n")
+label.Parent = gui
+gui.Parent = player:WaitForChild("PlayerGui")

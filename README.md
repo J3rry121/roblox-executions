@@ -51,7 +51,7 @@ Then in **Roblox Studio**:
 1. Open a new **Baseplate** place.
 2. Go to the **Plugins** tab and click **Rojo**.
 3. Click **Connect**. The scripts from this repo now show up in Studio.
-4. Press **Play**, walk up to the **Test Dummy**, and press **E** to run the chain execution.
+4. Press **Play**. You spawn as the killer. Walk up to the **Test Dummy** and press **E** (random) or **1**, **2**, **3** to pick an execution.
 
 > If you get "rojo is not recognized", close PowerShell, open a new one, `cd C:\RobloxDev\roblox-executions`, and try again.
 >
@@ -81,20 +81,49 @@ File name endings tell Rojo what to make:
 - `Name.client.luau` becomes a **LocalScript**
 - `Name.luau` becomes a **ModuleScript**
 
-## The starter chain execution
+## The executions
+
+Everything is **R6**. `CharacterSpawner` makes every player spawn as an R6 body, even if the place is set to R15.
+
+| Key | Execution | What happens |
+| --- | --- | --- |
+| 1 | Throat Lift | Grabbed by the throat, lifted off the floor, neck snapped, thrown aside |
+| 2 | Saw Impale | Chainsaw revs, lunges through the victim, lifts them on the bar, rips it out |
+| 3 | Drag Below | Grabbed from behind, bitten, forced down into a black pool in the floor |
+
+Each one has a cinematic camera, movie bars, screen shake, a dark red picture, blood and glowing eyes.
 
 | File | What it does |
 | --- | --- |
-| `src/shared/Executions/Registry.luau` | List of all executions (name, range, which module runs it) |
-| `src/shared/Executions/ChainBuilder.luau` | Builds the metal chain between two parts and keeps it attached |
-| `src/server/Executions/ChainExecution.luau` | The execution itself: hook, yank up, slam, kill |
-| `src/server/Executions/ExecutionService.server.luau` | Checks requests are legit, then runs the execution |
-| `src/server/Executions/TestDummy.server.luau` | Spawns a dummy to practise on (Studio only) |
-| `src/client/Executions/ExecutionInput.client.luau` | Press E to execute, plus camera shake |
+| `src/shared/Executions/Moves/*.luau` | One file per execution: keyframes for both bodies, the camera, and effects |
+| `src/shared/Executions/Kit.luau` | The engine that plays keyframes on R6 bodies (read the notes at the top) |
+| `src/shared/Executions/Registry.luau` | The list of executions and their order (keys 1, 2, 3...) |
+| `src/server/Executions/ExecutionService.server.luau` | Checks requests, freezes both bodies, kills the victim at the right time |
+| `src/server/Executions/TestDummy.server.luau` | Spawns an R6 dummy to practise on (Studio only) |
+| `src/server/Player/CharacterSpawner.server.luau` | Spawns players as R6 (as the killer while `PLAY_AS_KILLER = true`) |
+| `src/server/Player/KillerBuilder.luau` | Builds the killer and its chainsaw out of parts |
+| `src/client/Executions/ExecutionPlayer.client.luau` | Plays the execution on each player's screen |
+| `src/client/Executions/Effects.luau` | Shake, flash, blood, pool, glowing eyes, sounds |
+| `src/client/Executions/ExecutionInput.client.luau` | E / 1 / 2 / 3 keys and the help text in the corner |
 
-To change how it feels, edit the `TIMING` numbers at the top of `ChainExecution.luau`.
+### Using your own killer model
 
-To add a new execution, copy `ChainExecution.luau`, rename it, change the moves, and add it to `Registry.luau`.
+1. Make (or get permission to use) an **R6** model with a Humanoid.
+2. In Studio, drag it into **ReplicatedStorage** and rename it to **KillerModel**.
+3. Press Play. You now spawn as that model. If it has no part or model named `Chainsaw`, the default chainsaw goes in its right hand.
+
+Delete `KillerModel` to go back to the built-in killer. Set `PLAY_AS_KILLER = false` in `CharacterSpawner.server.luau` to spawn as your own avatar (in R6) instead.
+
+### Adding sounds
+
+There are no sounds yet. Open `src/client/Executions/Effects.luau`, find `SOUNDS` at the top, and paste sound ids like `"rbxassetid://1234567890"`. You can find free sounds in Studio under **View > Toolbox > Audio**.
+
+### Making a new execution
+
+1. Copy a file in `src/shared/Executions/Moves`, for example `ThroatLift.luau`, and rename it (e.g. `MyMove.luau`).
+2. Add `"MyMove"` to `Order` in `Registry.luau`. It gets the next number key.
+3. Change the keyframes. Each keyframe says where the body is (`root`) and how the joints are bent (`pose`) at a time `t` in seconds. The notes at the top of `Kit.luau` explain every number.
+4. Save. Rojo syncs it into Studio, so just press Play again to try it.
 
 ## Saving your work
 
