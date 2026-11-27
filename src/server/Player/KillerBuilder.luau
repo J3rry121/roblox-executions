@@ -44,7 +44,8 @@ local function addPart(parent: BasePart, name: string, size: Vector3, offset: CF
 end
 
 -- The chainsaw, built from parts, held in the right hand.
--- The bar points forward and down at 45 degrees when the arm hangs down.
+-- The bar carries on from the arm like a sword, so wherever the arm points
+-- the saw points (arm down = saw dragging by the feet, arm forward = thrust).
 function KillerBuilder.addChainsaw(character: Model)
 	local arm = character:FindFirstChild("Right Arm") :: BasePart
 	if not arm then
@@ -54,7 +55,8 @@ function KillerBuilder.addChainsaw(character: Model)
 	saw.Name = "Chainsaw"
 	saw.Parent = character
 
-	local grip = CFrame.new(0, -1, 0) * CFrame.Angles(math.rad(-45), 0, 0)
+	-- grip space: -Z runs along the bar, +Y is the top of the saw
+	local grip = CFrame.new(0, -1, 0) * CFrame.Angles(math.rad(-90), 0, 0)
 	local function piece(name, size, offset, props)
 		local part = addPart(arm, name, size, grip * offset, props)
 		part.Parent = saw
@@ -65,20 +67,19 @@ function KillerBuilder.addChainsaw(character: Model)
 	local dark = { Color = Color3.fromRGB(35, 35, 38), Material = Enum.Material.Metal }
 	local steel = { Color = Color3.fromRGB(150, 150, 155), Material = Enum.Material.Metal }
 
-	piece("Engine", Vector3.new(0.8, 0.9, 1.3), CFrame.new(0, 0.15, 0.35), rust)
-	piece("Cover", Vector3.new(0.82, 0.3, 0.9), CFrame.new(0, 0.7, 0.4), dark)
-	piece("Handle", Vector3.new(0.15, 0.15, 0.9), CFrame.new(0, 0.95, 0.1), dark)
-	piece("HandleFront", Vector3.new(0.15, 0.6, 0.15), CFrame.new(0, 0.7, -0.3), dark)
-	piece("Bar", Vector3.new(0.12, 0.5, 3.6), CFrame.new(0, 0, -2.4), steel)
-	piece("ChainTop", Vector3.new(0.18, 0.08, 3.7), CFrame.new(0, 0.29, -2.4), dark)
-	piece("ChainBottom", Vector3.new(0.18, 0.08, 3.7), CFrame.new(0, -0.29, -2.4), dark)
-	piece("Tip", Vector3.new(0.18, 0.66, 0.66), CFrame.new(0, 0, -4.25) * CFrame.Angles(0, math.rad(90), 0), {
+	piece("Engine", Vector3.new(0.75, 0.95, 1.1), CFrame.new(0, 0.25, -0.35), rust)
+	piece("Cover", Vector3.new(0.78, 0.25, 0.8), CFrame.new(0, 0.8, -0.35), dark)
+	piece("Handle", Vector3.new(0.15, 0.6, 0.15), CFrame.new(0, 0.95, 0.05), dark)
+	piece("Bar", Vector3.new(0.12, 0.5, 3.6), CFrame.new(0, 0, -2.7), steel)
+	piece("ChainTop", Vector3.new(0.18, 0.08, 3.7), CFrame.new(0, 0.29, -2.7), dark)
+	piece("ChainBottom", Vector3.new(0.18, 0.08, 3.7), CFrame.new(0, -0.29, -2.7), dark)
+	piece("Tip", Vector3.new(0.18, 0.66, 0.66), CFrame.new(0, 0, -4.55) * CFrame.Angles(0, math.rad(90), 0), {
 		Shape = Enum.PartType.Cylinder,
 		Color = dark.Color,
 		Material = dark.Material,
 	})
 	-- old stains on the bar
-	piece("Stain", Vector3.new(0.14, 0.3, 0.9), CFrame.new(0, -0.05, -3.2), {
+	piece("Stain", Vector3.new(0.14, 0.3, 0.9), CFrame.new(0, -0.05, -3.5), {
 		Color = Color3.fromRGB(70, 0, 0),
 		Material = Enum.Material.SmoothPlastic,
 	})

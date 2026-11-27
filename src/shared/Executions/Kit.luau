@@ -166,6 +166,12 @@ function Kit.prepareMove(id: string, move)
 	table.sort(move.Events, function(a, b)
 		return a.t < b.t
 	end)
+	-- Things only the server does, e.g. { t = 1.4, action = "Detach", joint = "RArm" }
+	move.ServerEvents = move.ServerEvents or {}
+	for _, event in move.ServerEvents do
+		assert(event.action == "Detach", `{id}: unknown server action {event.action}`)
+		assert(Kit.JOINTS[event.joint], `{id}: Detach needs a joint name, got {event.joint}`)
+	end
 	return move
 end
 
@@ -255,6 +261,20 @@ function Kit.clearPose(rig)
 			motor.Transform = CFrame.identity
 		end
 	end
+end
+
+-- Where a body part would be for a given root CFrame and pose (the server
+-- uses this when it tears a limb off, so the limb starts where players saw it)
+function Kit.partCFrame(rig, rootCFrame: CFrame, pose, name: string): CFrame
+	local function step(parentCFrame: CFrame, jointName: string): CFrame
+		local motor = rig.Motors[jointName]
+		return parentCFrame * motor.C0 * jointTransform(rig, jointName, pose[jointName]) * motor.C1:Inverse()
+	end
+	local torso = step(rootCFrame, "Torso")
+	if name == "Torso" then
+		return torso
+	end
+	return step(torso, name)
 end
 
 -- Locks a pose into the joints for everyone (the server uses this right

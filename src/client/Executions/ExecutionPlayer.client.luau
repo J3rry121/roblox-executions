@@ -15,6 +15,7 @@ local Effects = require(script.Parent:WaitForChild("Effects"))
 local player = Players.LocalPlayer
 local playExecution = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("PlayExecution")
 
+local MIN_CAMERA_DISTANCE = 4 -- never let the camera get closer than this to what it looks at
 local JOINT_SEED = { Torso = 1, Head = 2, RArm = 3, LArm = 4, RLeg = 5, LLeg = 6 }
 local cameraBusy = false
 
@@ -92,6 +93,11 @@ local function play(id: string, killer: Model, victim: Model, anchor: CFrame, st
 		camera.CameraType = Enum.CameraType.Scriptable
 		RunService:BindToRenderStep("ExecutionCamera", Enum.RenderPriority.Camera.Value + 1, function(dt)
 			local pos, look, fov = Kit.sampleCamera(move.Camera, now())
+			local offset = pos - look
+			if offset.Magnitude < MIN_CAMERA_DISTANCE then
+				local direction = if offset.Magnitude > 1e-3 then offset.Unit else Vector3.new(0, 0.3, 1).Unit
+				pos = look + direction * MIN_CAMERA_DISTANCE
+			end
 			camera.CFrame = anchor * CFrame.lookAt(pos, look) * fx:CameraShake(dt)
 			camera.FieldOfView = fov
 		end)

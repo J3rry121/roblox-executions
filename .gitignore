@@ -10,3 +10,4 @@ sourcemap.json
 # OS junk
 .DS_Store
 Thumbs.db
+tools/preview/out/

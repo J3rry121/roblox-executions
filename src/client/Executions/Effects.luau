@@ -8,6 +8,7 @@
 --   Blood  who part amount  blood spray from a body part ("Head", "Torso"...)
 --   Pool   who size time    black pool growing on the floor under someone
 --   Eyes   on               the killer's eyes glow red (on = true / false)
+--   Crush  who part         squashes a body part flat (head stomps) with lots of blood
 --   Sound  sound            plays a sound from the Sounds list below
 
 local Lighting = game:GetService("Lighting")
@@ -25,6 +26,11 @@ local SOUNDS = {
 	Drag = "",
 	Rev = "", -- chainsaw starting up
 	Saw = "", -- chainsaw cutting
+	Slash = "", -- chainsaw swing
+	Stomp = "",
+	Crush = "", -- head crushed
+	Rip = "", -- limb torn off
+	Scream = "",
 }
 
 local BLOOD_COLOR = Color3.fromRGB(95, 0, 0)
@@ -237,6 +243,35 @@ function handlers.Eyes(self, event)
 	light.Range = 8
 	light.Brightness = 3
 	light.Parent = self.EyeParts[1]
+end
+
+function handlers.Crush(self, event)
+	local character = self[event.who or "Victim"]
+	local part = character and character:FindFirstChild(event.part or "Head")
+	if not (part and part:IsA("BasePart")) then
+		return
+	end
+	local squash = Vector3.new(1.4, 0.25, 1.4)
+	local mesh = part:FindFirstChildOfClass("SpecialMesh")
+	if mesh then
+		mesh.Scale *= squash
+	else
+		part.Size *= squash
+	end
+	-- hide the face and anything worn on that part (hats, hair)
+	for _, item in part:GetChildren() do
+		if item:IsA("Decal") then
+			item.Transparency = 1
+		end
+	end
+	for _, accessory in character:GetChildren() do
+		local handle = accessory:IsA("Accessory") and accessory:FindFirstChild("Handle")
+		local weld = handle and handle:FindFirstChildWhichIsA("JointInstance")
+		if weld and (weld.Part0 == part or weld.Part1 == part) then
+			handle.Transparency = 1
+		end
+	end
+	handlers.Blood(self, { who = event.who, part = part.Name, amount = event.amount or 30 })
 end
 
 function handlers.Sound(self, event)
