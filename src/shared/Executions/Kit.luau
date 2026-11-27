@@ -19,9 +19,11 @@
 --     y  = twist (Head + turns to the left)
 --     z  = out to the side (RArm/RLeg + goes right, LArm/LLeg - goes left)
 --
---   ease = how it moves INTO this keyframe: "inOut" (default), "in", "out",
---          "linear", or "back" (overshoots a little, good for hits)
---   struggle = how much the limbs shake (degrees). 0 = still.
+--   ease = how it moves INTO this keyframe. Leave it out for smooth flowing
+--          motion. Use "in" (speeds up into a hit), "out" (fast then settles),
+--          "back" (overshoots a little), "inOut" or "linear" for sharp moments.
+--   struggle = how much the limbs shake (degrees). 0 = still. It fades
+--              smoothly between keyframes.
 --
 --   Anything you leave out of a keyframe stays the same as the keyframe
 --   before it, so you only write what changes.
@@ -175,43 +177,121 @@ function Kit.prepareMove(id: string, move)
 	return move
 end
 
--- Finds the two keyframes around time t and how far between them we are
-local function findSegment(track, t: number)
+-- HOW IN-BETWEEN FRAMES ARE MADE
+-- Keyframes with no ease (or ease = "smooth") are joined by a smooth curve
+-- that flows through them without stopping, like a real animator's spline.
+-- Keyframes with an ease ("in", "out", "inOut", "back", "linear") are hits:
+-- the motion snaps into them and settles there, which keeps impacts sharp.
+
+local function isSmooth(key): boolean
+	return key.ease == nil or key.ease == "smooth"
+end
+
+-- Finds the keyframes around time t: index before, index after, 0-1 between
+local function locate(track, t: number): (number, number, number)
 	local count = #track
 	if t <= track[1].t then
-		return track[1], track[1], 0
+		return 1, 1, 0
 	end
 	if t >= track[count].t then
-		return track[count], track[count], 0
+		return count, count, 0
 	end
 	for i = 1, count - 1 do
-		local a, b = track[i], track[i + 1]
-		if t < b.t then
-			local span = b.t - a.t
-			local alpha = if span > 0 then (t - a.t) / span else 1
-			local ease = Kit.Ease[b.ease or "inOut"] or Kit.Ease.inOut
-			return a, b, ease(alpha)
+		local nextKey = track[i + 1]
+		if t < nextKey.t then
+			local span = nextKey.t - track[i].t
+			return i, i + 1, if span > 0 then (t - track[i].t) / span else 1
 		end
 	end
-	return track[count], track[count], 0
+	return count, count, 0
+end
+
+-- How fast the values are changing at keyframe k (nil = not moving)
+local function tangent(track, k: number, get)
+	local key = track[k]
+	if k == 1 or k == #track or not isSmooth(key) then
+		return nil
+	end
+	local before, after = track[k - 1], track[k + 1]
+	local span = after.t - before.t
+	if span <= 0 then
+		return nil
+	end
+	local a, b = get(before), get(after)
+	local out = table.create(#a)
+	for n = 1, #a do
+		out[n] = (b[n] - a[n]) / span
+	end
+	return out
+end
+
+local function interpolate(track, i: number, j: number, s: number, get)
+	local a = get(track[i])
+	if i == j then
+		return table.clone(a)
+	end
+	local key = track[j]
+	local b = get(key)
+	if not isSmooth(key) then
+		local ease = Kit.Ease[key.ease] or Kit.Ease.inOut
+		return lerpArray(a, b, ease(s))
+	end
+	-- smooth curve (cubic Hermite)
+	local dt = key.t - track[i].t
+	local m1, m2 = tangent(track, i, get), tangent(track, j, get)
+	local s2, s3 = s * s, s * s * s
+	local h00, h10, h01, h11 = 2 * s3 - 3 * s2 + 1, s3 - 2 * s2 + s, -2 * s3 + 3 * s2, s3 - s2
+	local out = table.create(#a)
+	for n = 1, #a do
+		local v = h00 * a[n] + h01 * b[n]
+		if m1 then
+			v += h10 * dt * m1[n]
+		end
+		if m2 then
+			v += h11 * dt * m2[n]
+		end
+		out[n] = v
+	end
+	return out
+end
+
+local getRoot = function(key)
+	return key.root
+end
+local getJoint = {}
+for name in Kit.JOINTS do
+	getJoint[name] = function(key)
+		return key.pose[name]
+	end
+end
+local getPos = function(key)
+	return key.pos
+end
+local getLook = function(key)
+	return key.look
+end
+local getFov = function(key)
+	return { key.fov }
 end
 
 -- Returns root array, pose table, struggle amount at time t
 function Kit.sample(track, t: number)
-	local a, b, alpha = findSegment(track, t)
+	local i, j, s = locate(track, t)
 	local pose = {}
 	for name in Kit.JOINTS do
-		pose[name] = lerpArray(a.pose[name], b.pose[name], alpha)
+		pose[name] = interpolate(track, i, j, s, getJoint[name])
 	end
-	return lerpArray(a.root, b.root, alpha), pose, a.struggle
+	local struggle = track[i].struggle + (track[j].struggle - track[i].struggle) * s
+	return interpolate(track, i, j, s, getRoot), pose, struggle
 end
 
 -- Returns camera position, look-at point (both in anchor space) and field of view
 function Kit.sampleCamera(track, t: number): (Vector3, Vector3, number)
-	local a, b, alpha = findSegment(track, t)
-	local pos = lerpArray(a.pos, b.pos, alpha)
-	local look = lerpArray(a.look, b.look, alpha)
-	return Vector3.new(pos[1], pos[2], pos[3]), Vector3.new(look[1], look[2], look[3]), a.fov + (b.fov - a.fov) * alpha
+	local i, j, s = locate(track, t)
+	local pos = interpolate(track, i, j, s, getPos)
+	local look = interpolate(track, i, j, s, getLook)
+	local fov = interpolate(track, i, j, s, getFov)[1]
+	return Vector3.new(pos[1], pos[2], pos[3]), Vector3.new(look[1], look[2], look[3]), fov
 end
 
 -- Finds the joints of an R6 character. Returns nil if it isn't R6.
@@ -244,14 +324,28 @@ local function jointTransform(rig, name: string, angles): CFrame
 	return base:Inverse() * anglesToCFrame(angles) * base
 end
 
--- Shows a pose (used every frame by players' computers)
-function Kit.applyPose(rig, pose)
+-- Shows a pose (used every frame by players' computers).
+-- blendFrom/blend: optional starting joint CFrames to fade in from (0 to 1)
+function Kit.applyPose(rig, pose, blendFrom, blend: number?)
 	for name, angles in pose do
 		local motor = rig.Motors[name]
 		if motor and motor.Parent then
-			motor.Transform = jointTransform(rig, name, angles)
+			local target = jointTransform(rig, name, angles)
+			if blendFrom and blend and blend < 1 and blendFrom[name] then
+				target = blendFrom[name]:Lerp(target, blend)
+			end
+			motor.Transform = target
 		end
 	end
+end
+
+-- The joints' current CFrames, to blend from
+function Kit.capturePose(rig)
+	local out = {}
+	for name, motor in rig.Motors do
+		out[name] = motor.Transform
+	end
+	return out
 end
 
 -- Puts every joint back to normal

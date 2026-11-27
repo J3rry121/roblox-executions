@@ -118,20 +118,20 @@ return {
 		-- face down on the floor
 		{ t = 3.5, ease = "in", root = { 0.95, -2.5, -6.3, -90, 0, 0 }, pose = {
 			Head = { 30, 0, 0 },
-			RArm = { 160, 0, 25 },
-			LArm = { 160, 0, -25 },
+			RArm = { 180, 0, 25 },
+			LArm = { 180, 0, -25 },
 			RLeg = { 0, 0, 0 },
 			LLeg = { 0, 0, 0 },
 		} },
 		-- trying to crawl away
-		{ t = 3.8, struggle = 8, pose = { Head = { 40, 0, 0 }, RArm = { 175, 0, 15 } } },
+		{ t = 3.8, struggle = 8, pose = { Head = { 40, 0, 0 }, RArm = { 185, 0, 15 } } },
 		-- stomps
 		{ t = 4.35, ease = "out", struggle = 14, pose = { Head = { 10, 0, -10 } } },
-		{ t = 4.8, ease = "out", struggle = 10, pose = { Head = { 0, 0, 10 }, RArm = { 120, 0, 40 }, LArm = { 120, 0, -40 } } },
+		{ t = 4.8, ease = "out", struggle = 10, pose = { Head = { 0, 0, 10 }, RArm = { 185, 0, 40 }, LArm = { 185, 0, -40 } } },
 		{ t = 5.25, ease = "out", struggle = 0, pose = {
 			Head = { -5, 0, 0 },
-			RArm = { 100, 0, 60 },
-			LArm = { 100, 0, -60 },
+			RArm = { 185, 0, 60 },
+			LArm = { 185, 0, -60 },
 		} },
 	},
 

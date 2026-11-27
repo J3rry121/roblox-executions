@@ -94,7 +94,7 @@ Everything is **R6**. `CharacterSpawner` makes every player spawn as their own a
 | 5 | Throat Lift | Lifted by the throat, chainsaw in the gut, hoisted and slammed down |
 | 6 | Drag Below | Grabbed from behind, bitten, saw driven into the shoulder, forced down into a black pool |
 
-Each one has a cinematic camera, movie bars, screen shake, a dark red picture, blood and glowing eyes.
+Each one has a cinematic camera with a handheld feel, movie bars, screen shake, a dark red picture, blood and glowing eyes. Motion flows smoothly through the keyframes, both bodies blend in from where they were standing, and the victim's body drops as a ragdoll instead of falling apart. The Roblox "oof" death sound is turned off (`MuteDeathSound.client.luau`).
 
 > Roblox only allows this much blood and gore in experiences rated for older players. Before publishing, fill in the **Maturity & Compliance** questionnaire on the Creator Dashboard honestly.
 
@@ -111,7 +111,7 @@ Each one has a cinematic camera, movie bars, screen shake, a dark red picture, b
 | `src/client/Executions/ExecutionPlayer.client.luau` | Plays the execution on each player's screen |
 | `src/client/Executions/Effects.luau` | Shake, flash, blood, head crush, pool, glowing eyes, sounds |
 | `src/client/Executions/ExecutionInput.client.luau` | The keys and the help text in the corner |
-| `tools/preview/preview.py` | Draws rough pictures of each execution so you can check them without Studio |
+| `tools/preview/preview.py` | Draws rough pictures of each execution and warns about cameras inside bodies or limbs going through the floor |
 
 ### Using your own killer model
 

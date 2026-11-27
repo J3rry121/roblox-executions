@@ -83,8 +83,44 @@ local function detach(move, victimRig, anchor: CFrame, joint: string, t: number)
 	part.AssemblyLinearVelocity = anchor:VectorToWorldSpace(Vector3.new(math.random(-4, 4), 10, 6))
 end
 
+-- Swaps the joints for loose ball joints so the body slumps like a ragdoll
+-- instead of the classic Roblox fall-apart-in-pieces death
+local function ragdoll(rig, collide: boolean)
+	for name, motor in rig.Motors do
+		if name ~= "Torso" and motor.Parent and motor.Part0 and motor.Part1 then
+			local a0 = Instance.new("Attachment")
+			a0.Name = "RagdollJoint"
+			a0.CFrame = motor.C0
+			a0.Parent = motor.Part0
+			local a1 = Instance.new("Attachment")
+			a1.Name = "RagdollJoint"
+			a1.CFrame = motor.C1
+			a1.Parent = motor.Part1
+			local socket = Instance.new("BallSocketConstraint")
+			socket.Attachment0 = a0
+			socket.Attachment1 = a1
+			socket.LimitsEnabled = true
+			socket.UpperAngle = if name == "Head" then 40 else 70
+			socket.TwistLimitsEnabled = true
+			socket.TwistLowerAngle = -30
+			socket.TwistUpperAngle = 30
+			socket.Parent = motor.Part0
+			motor.Part1.CanCollide = collide
+			motor:Destroy()
+		end
+	end
+end
+
 local function play(move, killer: Model, victim: Model, killerRig, victimRig)
 	local anchor = flatten(killerRig.Root.CFrame)
+	local killerFrom, victimFrom = killerRig.Root.CFrame, victimRig.Root.CFrame
+
+	-- Keep the body in one piece when it dies (we ragdoll it ourselves)
+	local victimHumanoid = victim:FindFirstChildOfClass("Humanoid")
+	if victimHumanoid then
+		victimHumanoid.BreakJointsOnDeath = false
+		victimHumanoid.RequiresNeck = false
+	end
 
 	-- 1. Freeze both and put them at their starting spots
 	killerRig.Root.Anchored = true
@@ -94,7 +130,8 @@ local function play(move, killer: Model, victim: Model, killerRig, victimRig)
 
 	-- 2. Everyone's computer plays the animation, all starting at the same moment
 	local startTime = workspace:GetServerTimeNow()
-	playExecution:FireAllClients(move.Id, killer, victim, anchor, startTime)
+	-- (where they were before, so players' screens can blend in smoothly)
+	playExecution:FireAllClients(move.Id, killer, victim, anchor, startTime, killerFrom, victimFrom)
 
 	-- 3. Limbs torn off during the move
 	for _, event in move.ServerEvents do
@@ -110,13 +147,14 @@ local function play(move, killer: Model, victim: Model, killerRig, victimRig)
 	if victim.Parent then
 		local root, pose = Kit.sample(move.Victim, move.KillTime)
 		victimRig.Root.CFrame = anchor * Kit.rootCFrame(root)
-		Kit.bakePose(victimRig, pose) -- so the body falls apart from where it is
+		Kit.bakePose(victimRig, pose) -- so the body drops from where players saw it
 		if move.HideBodyOnKill then
 			hideBody(victim)
 		end
-		local humanoid = victim:FindFirstChildOfClass("Humanoid")
-		if humanoid then
-			humanoid.Health = 0
+		RunService.Heartbeat:Wait() -- let the joints move the limbs into that pose
+		ragdoll(victimRig, not move.HideBodyOnKill)
+		if victimHumanoid then
+			victimHumanoid.Health = 0
 		end
 		victimRig.Root.Anchored = false
 	end

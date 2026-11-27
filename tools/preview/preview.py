@@ -246,17 +246,54 @@ def ease(name, t):
     return 4 * t ** 3 if t < 0.5 else 1 - (-2 * t + 2) ** 3 / 2
 
 
-def segment(track, t):
+def is_smooth(key):
+    return key.get("ease") in (None, "smooth")
+
+
+def locate(track, t):
+    n = len(track)
     if t <= track[0]["t"]:
-        return track[0], track[0], 0
+        return 0, 0, 0
     if t >= track[-1]["t"]:
-        return track[-1], track[-1], 0
-    for a, b in zip(track, track[1:]):
-        if t < b["t"]:
-            span = b["t"] - a["t"]
-            alpha = (t - a["t"]) / span if span > 0 else 1
-            return a, b, ease(b.get("ease", "inOut"), alpha)
-    return track[-1], track[-1], 0
+        return n - 1, n - 1, 0
+    for i in range(n - 1):
+        if t < track[i + 1]["t"]:
+            span = track[i + 1]["t"] - track[i]["t"]
+            return i, i + 1, (t - track[i]["t"]) / span if span > 0 else 1
+    return n - 1, n - 1, 0
+
+
+def tangent(track, k, get):
+    if k == 0 or k == len(track) - 1 or not is_smooth(track[k]):
+        return None
+    span = track[k + 1]["t"] - track[k - 1]["t"]
+    if span <= 0:
+        return None
+    a, b = get(track[k - 1]), get(track[k + 1])
+    return [(y - x) / span for x, y in zip(a, b)]
+
+
+def interpolate(track, i, j, s, get):
+    a = list(get(track[i]))
+    if i == j:
+        return a
+    key = track[j]
+    b = get(key)
+    if not is_smooth(key):
+        return lerp(a, b, ease(key["ease"], s))
+    dt = key["t"] - track[i]["t"]
+    m1, m2 = tangent(track, i, get), tangent(track, j, get)
+    s2, s3 = s * s, s ** 3
+    h00, h10, h01, h11 = 2 * s3 - 3 * s2 + 1, s3 - 2 * s2 + s, -2 * s3 + 3 * s2, s3 - s2
+    out = []
+    for n in range(len(a)):
+        v = h00 * a[n] + h01 * b[n]
+        if m1:
+            v += h10 * dt * m1[n]
+        if m2:
+            v += h11 * dt * m2[n]
+        out.append(v)
+    return out
 
 
 def lerp(a, b, k):
@@ -264,14 +301,18 @@ def lerp(a, b, k):
 
 
 def sample(track, t):
-    a, b, k = segment(track, t)
-    pose = {j: lerp(a["pose"][j], b["pose"][j], k) for j in JOINT_ORDER}
-    return lerp(a["root"], b["root"], k), pose
+    i, j, s = locate(track, t)
+    pose = {jn: interpolate(track, i, j, s, lambda key, jn=jn: key["pose"][jn]) for jn in JOINT_ORDER}
+    return interpolate(track, i, j, s, lambda key: key["root"]), pose
 
 
 def sample_cam(track, t):
-    a, b, k = segment(track, t)
-    return lerp(a["pos"], b["pos"], k), lerp(a["look"], b["look"], k), a["fov"] + (b["fov"] - a["fov"]) * k
+    i, j, s = locate(track, t)
+    return (
+        interpolate(track, i, j, s, lambda key: key["pos"]),
+        interpolate(track, i, j, s, lambda key: key["look"]),
+        interpolate(track, i, j, s, lambda key: [key["fov"]])[0],
+    )
 
 
 def detached_at(move, who, t):
@@ -361,8 +402,18 @@ def render(boxes, cam_cf, fov, w=480, h=270):
 
 def check_camera(move, times):
     problems = []
+    worst = {}
     for t in times:
         boxes, _, _ = scene(move, t)
+        # bodies sinking into the floor (y = -3)
+        for name, m, size, _ in boxes:
+            if name.startswith("V:") and move.get("HideBodyOnKill"):
+                continue
+            if "Chainsaw" in name or "Eye" in name or "Face" in name:
+                continue
+            low = box_corners(m, size)[:, 1].min()
+            if low < -3.45 and (name not in worst or low < worst[name][0]):
+                worst[name] = (low, t)
         pos, look, _ = sample_cam(move["Camera"], t)
         p = np.array(pos)
         if np.linalg.norm(p - np.array(look)) < 4:
@@ -372,6 +423,8 @@ def check_camera(move, times):
             if inside(p, m, size, 0.6):
                 problems.append(f"t={t:.2f}s camera is inside/too close to {name}")
                 break
+    for name, (low, t) in worst.items():
+        problems.append(f"{name} goes {(-3 - low):.2f} studs into the floor (worst at t={t:.2f}s)")
     return problems
 
 

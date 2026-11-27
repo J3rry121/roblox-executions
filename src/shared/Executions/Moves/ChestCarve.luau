@@ -102,9 +102,16 @@ return {
 		{ t = 4.0, struggle = 12, pose = { Head = { -40, 15, 0 } } },
 		-- saw ripped out
 		{ t = 4.3, ease = "out", struggle = 4, root = { 0.9, -1.5, -4.6, 15, 180, 0 }, pose = {
+			RLeg = { -105, 0, 0 },
+			LLeg = { -105, 0, 0 },
 			Head = { 30, 0, 0 },
 			RArm = { 30, 0, 30 },
 			LArm = { 30, 0, -30 },
+		} },
+		-- tipping forward
+		{ t = 4.45, ease = "in", root = { 0.9, -1.4, -4.2, -45, 180, 0 }, pose = {
+			RLeg = { -60, 0, 0 },
+			LLeg = { -60, 0, 0 },
 		} },
 		-- falls on their face
 		{ t = 4.6, ease = "in", struggle = 0, root = { 0.9, -2.5, -3.5, -90, 180, 0 }, pose = {
