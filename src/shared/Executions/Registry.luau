@@ -13,8 +13,11 @@ local Moves = script.Parent:WaitForChild("Moves")
 local Registry = {
 	-- Keys 1, 2, 3... in game follow this order
 	Order = {
+		"BackSaw",
+		"ChestCarve",
+		"OverheadSplit",
+		"ArmRip",
 		"ThroatLift",
-		"SawImpale",
 		"DragBelow",
 	},
 	Moves = {},

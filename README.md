@@ -51,7 +51,7 @@ Then in **Roblox Studio**:
 1. Open a new **Baseplate** place.
 2. Go to the **Plugins** tab and click **Rojo**.
 3. Click **Connect**. The scripts from this repo now show up in Studio.
-4. Press **Play**. You spawn as the killer. Walk up to the **Test Dummy** and press **E** (random) or **1**, **2**, **3** to pick an execution.
+4. Press **Play**. You spawn as yourself (in R6) and the killer, **Sackhead**, hunts you down. When it catches you it executes you. Press **1** to **6** to pick which execution it does next (if it's close it does it straight away), or **E** for a random one.
 
 > If you get "rojo is not recognized", close PowerShell, open a new one, `cd C:\RobloxDev\roblox-executions`, and try again.
 >
@@ -83,36 +83,43 @@ File name endings tell Rojo what to make:
 
 ## The executions
 
-Everything is **R6**. `CharacterSpawner` makes every player spawn as an R6 body, even if the place is set to R15.
+Everything is **R6**. `CharacterSpawner` makes every player spawn as their own avatar in R6, even if the place is set to R15. You are the victim; the killer is an NPC.
 
 | Key | Execution | What happens |
 | --- | --- | --- |
-| 1 | Throat Lift | Grabbed by the throat, lifted off the floor, neck snapped, thrown aside |
-| 2 | Saw Impale | Chainsaw revs, lunges through the victim, lifts them on the bar, rips it out |
-| 3 | Drag Below | Grabbed from behind, bitten, forced down into a black pool in the floor |
+| 1 | Back Saw | Chainsaw through the back and out the chest, lifted on the bar, shoved face down, head stomped until it caves in |
+| 2 | Chest Carve | Two chainsaw slashes across the chest, the whole bar rammed in, drops to the knees trembling, falls on their face |
+| 3 | Overhead Split | Kicked to the knees, chainsaw brought down through the head and ground deeper, body kicked over |
+| 4 | Arm Rip | Arm torn clean off, then the head taken off with one swing |
+| 5 | Throat Lift | Lifted by the throat, chainsaw in the gut, hoisted and slammed down |
+| 6 | Drag Below | Grabbed from behind, bitten, saw driven into the shoulder, forced down into a black pool |
 
 Each one has a cinematic camera, movie bars, screen shake, a dark red picture, blood and glowing eyes.
 
+> Roblox only allows this much blood and gore in experiences rated for older players. Before publishing, fill in the **Maturity & Compliance** questionnaire on the Creator Dashboard honestly.
+
 | File | What it does |
 | --- | --- |
-| `src/shared/Executions/Moves/*.luau` | One file per execution: keyframes for both bodies, the camera, and effects |
+| `src/shared/Executions/Moves/*.luau` | One file per execution: keyframes for both bodies, the camera, effects, and limbs torn off |
 | `src/shared/Executions/Kit.luau` | The engine that plays keyframes on R6 bodies (read the notes at the top) |
 | `src/shared/Executions/Registry.luau` | The list of executions and their order (keys 1, 2, 3...) |
-| `src/server/Executions/ExecutionService.server.luau` | Checks requests, freezes both bodies, kills the victim at the right time |
-| `src/server/Executions/TestDummy.server.luau` | Spawns an R6 dummy to practise on (Studio only) |
-| `src/server/Player/CharacterSpawner.server.luau` | Spawns players as R6 (as the killer while `PLAY_AS_KILLER = true`) |
+| `src/server/Executions/ExecutionRunner.luau` | Runs one execution: freezes both bodies, tears off limbs, kills the victim |
+| `src/server/Executions/KillerNPC.server.luau` | Spawns the killer and makes it chase players (speed and range at the top) |
+| `src/server/Executions/ExecutionService.server.luau` | The 1-6 / E testing keys |
+| `src/server/Player/CharacterSpawner.server.luau` | Spawns players as their own avatar in R6 |
 | `src/server/Player/KillerBuilder.luau` | Builds the killer and its chainsaw out of parts |
 | `src/client/Executions/ExecutionPlayer.client.luau` | Plays the execution on each player's screen |
-| `src/client/Executions/Effects.luau` | Shake, flash, blood, pool, glowing eyes, sounds |
-| `src/client/Executions/ExecutionInput.client.luau` | E / 1 / 2 / 3 keys and the help text in the corner |
+| `src/client/Executions/Effects.luau` | Shake, flash, blood, head crush, pool, glowing eyes, sounds |
+| `src/client/Executions/ExecutionInput.client.luau` | The keys and the help text in the corner |
+| `tools/preview/preview.py` | Draws rough pictures of each execution so you can check them without Studio |
 
 ### Using your own killer model
 
 1. Make (or get permission to use) an **R6** model with a Humanoid.
 2. In Studio, drag it into **ReplicatedStorage** and rename it to **KillerModel**.
-3. Press Play. You now spawn as that model. If it has no part or model named `Chainsaw`, the default chainsaw goes in its right hand.
+3. Press Play. The killer now looks like that model. If it has no part or model named `Chainsaw`, the default chainsaw goes in its right hand.
 
-Delete `KillerModel` to go back to the built-in killer. Set `PLAY_AS_KILLER = false` in `CharacterSpawner.server.luau` to spawn as your own avatar (in R6) instead.
+Delete `KillerModel` to go back to the built-in killer.
 
 ### Adding sounds
 

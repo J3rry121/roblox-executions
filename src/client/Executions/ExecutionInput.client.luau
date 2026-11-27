@@ -1,7 +1,8 @@
 -- ExecutionInput.client.luau
--- Walk up to another character (or the Test Dummy) and press:
---   E       = a random execution
---   1, 2, 3 = a specific one (same order as Registry.Order)
+-- Testing keys. You are the victim: the killer hunts you down.
+--   1-9 = pick which execution the killer does to you (same order as
+--         Registry.Order). Near the killer it happens right away.
+--   E   = random execution
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -26,54 +27,24 @@ local NUMBER_KEYS = {
 	Enum.KeyCode.Nine,
 }
 
--- Find the closest living character in range (not ourselves)
-local function findNearestTarget(range: number): Model?
-	local character = player.Character
-	local root = character and character:FindFirstChild("HumanoidRootPart")
-	if not root then
-		return nil
-	end
-
-	local nearest, nearestDistance = nil, range
-	for _, model in workspace:GetChildren() do
-		if model ~= character and model:IsA("Model") then
-			local humanoid = model:FindFirstChildOfClass("Humanoid")
-			local targetRoot = model:FindFirstChild("HumanoidRootPart")
-			if humanoid and targetRoot and humanoid.Health > 0 then
-				local distance = (targetRoot.Position - root.Position).Magnitude
-				if distance <= nearestDistance then
-					nearest, nearestDistance = model, distance
-				end
-			end
-		end
-	end
-	return nearest
-end
-
-local function tryExecution(id: string)
-	local move = Registry.Moves[id]
-	local target = move and findNearestTarget(move.Range)
-	if target then
-		requestExecution:FireServer(id, target)
-	end
-end
-
+-- Tell the server which execution we want. If the killer is close it does
+-- it right away, otherwise it remembers and uses it when it catches us.
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	if gameProcessed then
 		return
 	end
 	if input.KeyCode == RANDOM_KEY then
-		tryExecution(Registry.Order[math.random(#Registry.Order)])
+		requestExecution:FireServer("Random")
 		return
 	end
 	local index = table.find(NUMBER_KEYS, input.KeyCode)
 	if index and Registry.Order[index] then
-		tryExecution(Registry.Order[index])
+		requestExecution:FireServer(Registry.Order[index])
 	end
 end)
 
 -- Small help text in the corner
-local lines = { "E  random execution" }
+local lines = { "Pick how the killer gets you:", "E  random" }
 for i, id in Registry.Order do
 	table.insert(lines, `{i}  {Registry.Moves[id].DisplayName}`)
 end
@@ -84,7 +55,7 @@ gui.ResetOnSpawn = false
 local label = Instance.new("TextLabel")
 label.AnchorPoint = Vector2.new(0, 1)
 label.Position = UDim2.new(0, 12, 1, -12)
-label.Size = UDim2.fromOffset(220, 20 * #lines)
+label.Size = UDim2.fromOffset(260, 20 * #lines)
 label.BackgroundTransparency = 1
 label.TextXAlignment = Enum.TextXAlignment.Left
 label.TextYAlignment = Enum.TextYAlignment.Bottom

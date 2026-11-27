@@ -1,18 +1,12 @@
 -- CharacterSpawner.server.luau
--- Makes every player spawn as an R6 character, even if the game is set to R15.
---
--- PLAY_AS_KILLER = true  -> players spawn as the killer (great for testing:
---                           walk up to the Test Dummy and press E)
--- PLAY_AS_KILLER = false -> players spawn as their own avatar, in R6
+-- Makes every player spawn as their own avatar in R6, even if the game is
+-- set to R15. Players are the victims; the killer is KillerNPC.
 --
 -- Tip: once your game is published you can also set R6 in
 -- Home > Game Settings > Avatar. This script still works either way.
 
 local Players = game:GetService("Players")
 
-local KillerBuilder = require(script.Parent.KillerBuilder)
-
-local PLAY_AS_KILLER = true
 local RESPAWN_DELAY = 3
 
 Players.CharacterAutoLoads = false
@@ -47,12 +41,7 @@ local function spawnCharacter(player: Player)
 		return
 	end
 
-	local character
-	if PLAY_AS_KILLER then
-		character = KillerBuilder.build()
-	else
-		character = Players:CreateHumanoidModelFromDescription(getDescription(player), Enum.HumanoidRigType.R6)
-	end
+	local character = Players:CreateHumanoidModelFromDescription(getDescription(player), Enum.HumanoidRigType.R6)
 	character.Name = player.Name
 	character:PivotTo(getSpawnCFrame())
 
