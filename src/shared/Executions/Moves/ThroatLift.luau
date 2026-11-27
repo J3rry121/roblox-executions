@@ -41,7 +41,7 @@ return {
 			Head = { 20, 0, 0 },
 		} },
 		-- SLAM it down
-		{ t = 2.8, ease = "in", root = { 0, -0.8, -1.6 }, pose = {
+		{ t = 2.8, ease = "in", root = { 0, -0.5, -1.6 }, pose = {
 			LArm = { 80, 0, 10 },
 			RArm = { 40, 0, 20 },
 			Torso = { -50, 0, 0 },
@@ -97,10 +97,10 @@ return {
 			LLeg = { -5, 0, 0 },
 		} },
 		-- slammed flat on the back
-		{ t = 2.8, ease = "in", root = { -1, -2.5, -1.9, 90, 180, 0 }, pose = {
-			Head = { 20, 40, 0 },
-			RArm = { 90, 0, 60 },
-			LArm = { 90, 0, -60 },
+		{ t = 2.8, ease = "in", root = { -1, -2.4, -1.9, 90, 180, 0 }, pose = {
+			Head = { -10, 40, 0 },
+			RArm = { 10, 0, 80 },
+			LArm = { 10, 0, -80 },
 			RLeg = { 15, 0, 10 },
 			LLeg = { 10, 0, -10 },
 		} },

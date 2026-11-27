@@ -1,8 +1,8 @@
 -- OverheadSplit.luau
 -- The killer kicks the victim down onto their knees, raises the running
 -- chainsaw over its head and brings it straight down through their head and
--- into their chest, grinding it deeper while they shake, then kicks the body
--- over.
+-- into their chest, grinding it deeper while they shake, then rips it out
+-- and lets them slump onto their face.
 --
 -- How to read this file: see the notes at the top of Kit.luau.
 
@@ -42,10 +42,10 @@ return {
 			LArm = { 30, 0, -10 },
 			Torso = { 5, 0, 0 },
 			Head = { -10, 0, 0 },
-			RLeg = { 60, 0, 0 },
-			LLeg = { 0, 0, 0 },
+			RLeg = { -20, 0, 0 },
+			LLeg = { 20, 0, 0 },
 		} },
-		{ t = 3.3, pose = { RLeg = { 0, 0, 0 } } },
+		{ t = 3.3, pose = { RLeg = { 0, 0, 0 }, LLeg = { 0, 0, 0 } } },
 		{ t = 4.2, pose = {
 			RArm = { 15, 0, 0 },
 			LArm = { 0, 0, 0 },
@@ -56,6 +56,15 @@ return {
 
 	Victim = {
 		{ t = 0, root = { 0.55, 0, -4.5, 0, 180, 0 } },
+		{ t = 0.2 },
+		-- legs kicked out from under them
+		{ t = 0.38, ease = "out", root = { 0.55, -0.6, -4.4, -5, 180, 0 }, pose = {
+			RLeg = { -60, 0, 0 },
+			LLeg = { -55, 0, 0 },
+			Head = { 25, 0, 0 },
+			RArm = { 50, 0, 40 },
+			LArm = { 50, 0, -40 },
+		} },
 		-- kicked down onto the knees
 		{ t = 0.45, ease = "in", root = { 0.55, -1.5, -4.2, 0, 180, 0 }, pose = {
 			RLeg = { -90, 0, 0 },
@@ -82,13 +91,19 @@ return {
 			RArm = { 20, 0, 20 },
 			LArm = { 20, 0, -20 },
 		} },
-		-- kicked over onto the side
-		{ t = 3.0, ease = "in", struggle = 0, root = { 1.2, -2.0, -4.9, 0, 180, -90 }, pose = {
-			RLeg = { -30, 0, 0 },
-			LLeg = { -10, 0, 0 },
-			Head = { -20, 0, -40 },
-			RArm = { 60, 0, 20 },
-			LArm = { 10, 0, -10 },
+		-- saw ripped out: slumps forward onto the face
+		{ t = 2.9, ease = "in", struggle = 0, root = { 0.55, -1.6, -4.0, -45, 180, 0 }, pose = {
+			RLeg = { -45, 0, 0 },
+			LLeg = { -45, 0, 0 },
+			RArm = { 30, 0, 20 },
+			LArm = { 30, 0, -20 },
+		} },
+		{ t = 3.0, ease = "in", root = { 0.55, -2.4, -3.3, -90, 180, 0 }, pose = {
+			RLeg = { 0, 0, 5 },
+			LLeg = { 0, 0, -5 },
+			Head = { 10, 40, 0 },
+			RArm = { 10, 0, 25 },
+			LArm = { 5, 0, -20 },
 		} },
 	},
 
