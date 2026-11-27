@@ -89,12 +89,16 @@ Everything is **R6**. `CharacterSpawner` makes every player spawn as their own a
 | --- | --- | --- |
 | 1 | Back Saw | Chainsaw through the back and out the chest, lifted on the bar, shoved face down, head stomped until it caves in |
 | 2 | Chest Carve | Two chainsaw slashes across the chest, the whole bar rammed in, drops to the knees trembling, falls on their face |
-| 3 | Overhead Split | Kicked to the knees, chainsaw brought down through the head and ground deeper, body kicked over |
+| 3 | Overhead Split | Kicked in the gut onto their knees, chainsaw brought down into the skull and ground all the way down, the body falls apart in two halves |
 | 4 | Arm Rip | Arm torn clean off, then the head taken off with one swing |
 | 5 | Throat Lift | Lifted by the throat, chainsaw in the gut, hoisted and slammed down |
 | 6 | Drag Below | Grabbed from behind, bitten, saw driven into the shoulder, forced down into a black pool |
 
-Each one has a cinematic camera with a handheld feel, movie bars, screen shake, a dark red picture, blood and glowing eyes. Motion flows smoothly through the keyframes, both bodies blend in from where they were standing, and the victim's body drops as a ragdoll instead of falling apart. The Roblox "oof" death sound is turned off (`MuteDeathSound.client.luau`).
+Each one has a cinematic camera with a handheld feel, movie bars, screen shake, a dark red picture and glowing eyes. Motion flows smoothly through the keyframes, both bodies blend in from where they were standing, and the victim's body drops as a ragdoll instead of falling apart. The Roblox "oof" death sound is turned off (`MuteDeathSound.client.luau`).
+
+Effects: blood spray and mist particles, bloody chunks, chainsaw sparks on bone, exhaust smoke, bleeding wounds that stick to the body, blood splashing onto the screen, a camera "punch" and a split-second freeze (hit-stop) on the big hits. Sounds: chainsaw revs, a running saw loop, cutting, bone snaps, gore, rips, stomps, body falls and a horror sting, each picked at random from a few options.
+
+**Voice:** the victim screams, grunts, chokes and gasps. Press **V** to switch your voice between **Female**, **Male** and **Off**. The default is at the top of `src/shared/Executions/Sounds.luau`.
 
 > Roblox only allows this much blood and gore in experiences rated for older players. Before publishing, fill in the **Maturity & Compliance** questionnaire on the Creator Dashboard honestly.
 
@@ -105,11 +109,12 @@ Each one has a cinematic camera with a handheld feel, movie bars, screen shake, 
 | `src/shared/Executions/Registry.luau` | The list of executions and their order (keys 1, 2, 3...) |
 | `src/server/Executions/ExecutionRunner.luau` | Runs one execution: freezes both bodies, tears off limbs, kills the victim |
 | `src/server/Executions/KillerNPC.server.luau` | Spawns the killer and makes it chase players (speed and range at the top) |
-| `src/server/Executions/ExecutionService.server.luau` | The 1-6 / E testing keys |
+| `src/server/Executions/ExecutionService.server.luau` | The 1-6 / E testing keys and the V voice switch |
 | `src/server/Player/CharacterSpawner.server.luau` | Spawns players as their own avatar in R6 |
 | `src/server/Player/KillerBuilder.luau` | Builds the killer and its chainsaw out of parts |
 | `src/client/Executions/ExecutionPlayer.client.luau` | Plays the execution on each player's screen |
-| `src/client/Executions/Effects.luau` | Shake, flash, blood, head crush, pool, glowing eyes, sounds |
+| `src/shared/Executions/Sounds.luau` | Every sound id and voice line, and the default voice |
+| `src/client/Executions/Effects.luau` | All the effects (blood, sparks, wounds, screen blood, hit-stop, sounds, voice...). The list is at the top |
 | `src/client/Executions/ExecutionInput.client.luau` | The keys and the help text in the corner |
 | `tools/preview/preview.py` | Draws rough pictures of each execution and warns about cameras inside bodies or limbs going through the floor |
 
@@ -123,7 +128,7 @@ Delete `KillerModel` to go back to the built-in killer.
 
 ### Adding sounds
 
-There are no sounds yet. Open `src/client/Executions/Effects.luau`, find `SOUNDS` at the top, and paste sound ids like `"rbxassetid://1234567890"`. You can find free sounds in Studio under **View > Toolbox > Audio**.
+All sound ids are in `src/shared/Executions/Sounds.luau`. They are free sounds from the Roblox Creator Store, picked by their names, so some may not fit. To swap one: in Studio open **View > Toolbox > Audio**, find a sound, right click it, choose **Copy Asset ID** and paste the number into the list. Each name can have several ids; one is picked at random each time.
 
 ### Making a new execution
 

@@ -67,7 +67,22 @@ function KillerBuilder.addChainsaw(character: Model)
 	local dark = { Color = Color3.fromRGB(35, 35, 38), Material = Enum.Material.Metal }
 	local steel = { Color = Color3.fromRGB(150, 150, 155), Material = Enum.Material.Metal }
 
-	piece("Engine", Vector3.new(0.75, 0.95, 1.1), CFrame.new(0, 0.25, -0.35), rust)
+	local engine = piece("Engine", Vector3.new(0.75, 0.95, 1.1), CFrame.new(0, 0.25, -0.35), rust)
+	-- thin exhaust smoke drifting off the engine all the time
+	local exhaust = Instance.new("ParticleEmitter")
+	exhaust.Name = "Exhaust"
+	exhaust.Texture = "rbxasset://textures/particles/smoke_main.dds"
+	exhaust.Color = ColorSequence.new(Color3.fromRGB(70, 70, 70))
+	exhaust.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(1, 1.2) })
+	exhaust.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.7), NumberSequenceKeypoint.new(1, 1) })
+	exhaust.Lifetime = NumberRange.new(1, 2)
+	exhaust.Speed = NumberRange.new(0.5, 1.5)
+	exhaust.Acceleration = Vector3.new(0, 1.5, 0)
+	exhaust.Rotation = NumberRange.new(0, 360)
+	exhaust.RotSpeed = NumberRange.new(-40, 40)
+	exhaust.Rate = 6
+	exhaust.EmissionDirection = Enum.NormalId.Top
+	exhaust.Parent = engine
 	piece("Cover", Vector3.new(0.78, 0.25, 0.8), CFrame.new(0, 0.8, -0.35), dark)
 	piece("Handle", Vector3.new(0.15, 0.6, 0.15), CFrame.new(0, 0.95, 0.05), dark)
 	piece("Bar", Vector3.new(0.12, 0.5, 3.6), CFrame.new(0, 0, -2.7), steel)

@@ -19,6 +19,7 @@ local MIN_CAMERA_DISTANCE = 4 -- never let the camera get closer than this to wh
 local BLEND_IN = 0.3 -- seconds to blend from where the bodies were into the execution
 local CAMERA_BLEND_IN = 0.45 -- seconds to blend the camera in
 local HANDHELD = 0.5 -- degrees of gentle "handheld camera" sway (0 = rock steady)
+local CATCH_UP = 1.6 -- how fast the animation catches up after a hit-stop
 local JOINT_SEED = { Torso = 1, Head = 2, RArm = 3, LArm = 4, RLeg = 5, LLeg = 6 }
 local cameraBusy = false
 
@@ -84,20 +85,37 @@ local function play(id: string, killer: Model, victim: Model, anchor: CFrame, st
 		return workspace:GetServerTimeNow() - startTime
 	end
 
+	-- Animation time. Normally the same as now(), but a HitStop freezes it
+	-- for a split second; afterwards it runs a bit faster until it catches up
+	-- (so it never drifts away from what the server does).
+	local animTime = math.max(now(), 0)
+	local lastReal = animTime
+	local function advance()
+		local real = now()
+		local dt = math.max(real - lastReal, 0)
+		lastReal = real
+		if real < fx.HoldUntil then
+			return
+		end
+		local speed = if animTime < real - 1e-3 then CATCH_UP else 1
+		animTime = math.min(animTime + dt * speed, real)
+	end
+
 	-- Bodies: runs right after the default animations, so ours win
 	local bodyConnection
 	bodyConnection = RunService.PreSimulation:Connect(function()
-		local t = now()
-
-		while nextEvent <= #move.Events and move.Events[nextEvent].t <= t do
+		local real = now()
+		while nextEvent <= #move.Events and move.Events[nextEvent].t <= real do
 			fx:Run(move.Events[nextEvent])
 			nextEvent += 1
 		end
+		advance()
+		local t = animTime
 
 		if killer.Parent then
 			poseRig(killerRig, anchor, move.Killer, t, 2.2, killerFrom, killerPoseFrom)
 		end
-		if t < move.KillTime and victim.Parent then
+		if real < move.KillTime and victim.Parent then
 			poseRig(victimRig, anchor, move.Victim, t, 7, victimFrom, victimPoseFrom)
 		end
 	end)
@@ -112,7 +130,7 @@ local function play(id: string, killer: Model, victim: Model, anchor: CFrame, st
 		cameraBusy = true
 		camera.CameraType = Enum.CameraType.Scriptable
 		RunService:BindToRenderStep("ExecutionCamera", Enum.RenderPriority.Camera.Value + 1, function(dt)
-			local pos, look, fov = Kit.sampleCamera(move.Camera, now())
+			local pos, look, fov = Kit.sampleCamera(move.Camera, animTime)
 			local offset = pos - look
 			if offset.Magnitude < MIN_CAMERA_DISTANCE then
 				local direction = if offset.Magnitude > 1e-3 then offset.Unit else Vector3.new(0, 0.3, 1).Unit
@@ -132,7 +150,7 @@ local function play(id: string, killer: Model, victim: Model, anchor: CFrame, st
 				fov = oldFov + (fov - oldFov) * blend
 			end
 			camera.CFrame = shot * fx:CameraShake(dt)
-			camera.FieldOfView = fov
+			camera.FieldOfView = fov + fx:CameraFov(dt)
 		end)
 	end
 
