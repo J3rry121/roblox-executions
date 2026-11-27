@@ -8,6 +8,7 @@ local CollectionService = game:GetService("CollectionService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Registry = require(Shared.Executions.Registry)
+local Sounds = require(Shared.Executions.Sounds)
 local Runner = require(script.Parent.ExecutionRunner)
 
 local TEST_RANGE = 15 -- studs
@@ -43,4 +44,11 @@ Runner.RequestExecution.OnServerEvent:Connect(function(player, executionId)
 	end
 	local id = if executionId == "Random" then Registry.Order[math.random(#Registry.Order)] else executionId
 	Runner.run(Registry.Moves[id], killer, victim)
+end)
+
+-- The V key: which voice your character screams with (Female / Male / Off)
+Runner.SetVoice.OnServerEvent:Connect(function(player, voice)
+	if typeof(voice) == "string" and table.find(Sounds.VoiceOptions, voice) then
+		player:SetAttribute("Voice", voice)
+	end
 end)

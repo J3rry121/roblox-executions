@@ -43,8 +43,8 @@ return {
 		} },
 		-- push down as they sink to their knees
 		{ t = 3.0, struggle = 5, pose = {
-			RArm = { 65, 0, -10 },
-			LArm = { 60, 0, -30 },
+			RArm = { 70, 0, -10 },
+			LArm = { 65, 0, -30 },
 			Torso = { -10, 0, 0 },
 			Head = { -25, 0, 15 },
 			RLeg = { 15, 0, 0 },
@@ -91,25 +91,36 @@ return {
 			RArm = { 80, 0, -25 },
 			LArm = { 80, 0, 25 },
 		} },
-		-- sinks to the knees, trembling, hands on the bar
-		{ t = 3.0, root = { 0.9, -1.5, -4.5, -5, 180, 0 }, struggle = 10, pose = {
-			RLeg = { -90, 0, 0 },
-			LLeg = { -90, 0, 0 },
+		-- knees start to give
+		{ t = 2.6, root = { 0.9, -0.5, -4.6, -8, 180, 0 }, struggle = 14, pose = {
+			RLeg = { -30, 0, 4 },
+			LLeg = { -38, 0, -4 },
+			Head = { -30, 0, 0 },
+		} },
+		-- drops onto the knees, trembling, hands on the bar
+		{ t = 3.0, ease = "in", root = { 0.9, -1.05, -4.5, -6, 180, 0 }, struggle = 10, pose = {
+			RLeg = { -66, 0, 8 },
+			LLeg = { -66, 0, -8 },
 			RArm = { 70, 0, -20 },
 			LArm = { 70, 0, 20 },
 			Head = { -30, 0, 0 },
 		} },
-		{ t = 4.0, struggle = 12, pose = { Head = { -40, 15, 0 } } },
+		{ t = 3.12, ease = "out", root = { 0.9, -0.98, -4.5, -4, 180, 0 } },
+		{ t = 4.0, struggle = 12, root = { 0.9, -1.12, -4.5, -8, 180, 0 }, pose = {
+			Head = { -40, 15, 0 },
+			RLeg = { -72, 0, 10 },
+			LLeg = { -72, 0, -10 },
+		} },
 		-- saw ripped out
-		{ t = 4.3, ease = "out", struggle = 4, root = { 0.9, -1.5, -4.6, 15, 180, 0 }, pose = {
-			RLeg = { -105, 0, 0 },
-			LLeg = { -105, 0, 0 },
+		{ t = 4.3, ease = "out", struggle = 4, root = { 0.9, -1.1, -4.6, 12, 180, 0 }, pose = {
+			RLeg = { -82, 0, 8 },
+			LLeg = { -82, 0, -8 },
 			Head = { 30, 0, 0 },
 			RArm = { 30, 0, 30 },
 			LArm = { 30, 0, -30 },
 		} },
 		-- tipping forward
-		{ t = 4.45, ease = "in", root = { 0.9, -1.4, -4.2, -45, 180, 0 }, pose = {
+		{ t = 4.45, ease = "in", root = { 0.9, -1.25, -4.2, -45, 180, 0 }, pose = {
 			RLeg = { -60, 0, 0 },
 			LLeg = { -60, 0, 0 },
 		} },
@@ -148,7 +159,7 @@ return {
 		{ t = 2.15, fx = "Shake", power = 1.4 },
 		{ t = 2.15, fx = "Flash", color = Color3.fromRGB(170, 0, 0), alpha = 0.5, time = 0.35 },
 		{ t = 2.15, fx = "Sound", sound = "Saw" },
-		{ t = 2.15, fx = "Sound", sound = "Scream" },
+		{ t = 2.15, fx = "Voice", line = "Scream" },
 		{ t = 2.15, fx = "Blood", who = "Victim", part = "Torso", amount = 20 },
 		{ t = 2.2, fx = "Blood", who = "Victim", part = "Torso", amount = 3, repeatFor = 2.1, every = 0.1 },
 		{ t = 2.2, fx = "Shake", power = 0.4, repeatFor = 2.1, every = 0.12 },
@@ -157,5 +168,38 @@ return {
 		{ t = 4.3, fx = "Shake", power = 0.8 },
 		{ t = 4.6, fx = "Shake", power = 0.6 },
 		{ t = 5.0, fx = "Eyes", on = false },
+		-- sound and gore
+		{ t = 0, fx = "Sound", sound = "Sting" },
+		{ t = 0, fx = "SawLoop", on = true },
+		{ t = 0.1, fx = "Smoke", amount = 12 },
+		{ t = 0.4, fx = "Voice", line = "Gasp" },
+		{ t = 0.75, fx = "Punch", amount = 5 },
+		{ t = 0.75, fx = "Voice", line = "Grunt" },
+		{ t = 0.75, fx = "Wound", who = "Victim", part = "Torso", side = "Front", x = -0.3, y = 0.3, size = 1.1 },
+		{ t = 0.75, fx = "Splatter", amount = 3 },
+		{ t = 1.4, fx = "Punch", amount = 6 },
+		{ t = 1.4, fx = "Voice", line = "Scream" },
+		{ t = 1.4, fx = "Wound", who = "Victim", part = "Torso", side = "Front", x = 0.3, y = -0.2, size = 1.1 },
+		{ t = 1.4, fx = "Splatter", amount = 4 },
+		{ t = 2.15, fx = "HitStop", time = 0.1 },
+		{ t = 2.15, fx = "Punch", amount = 10 },
+		{ t = 2.15, fx = "Sound", sound = "Stab" },
+		{ t = 2.15, fx = "Sound", sound = "Gore" },
+		{ t = 2.15, fx = "Sparks", who = "Victim", part = "Torso", amount = 25 },
+		{ t = 2.15, fx = "Splatter", amount = 7 },
+		{ t = 2.2, fx = "Wound", who = "Victim", part = "Torso", side = "Back", y = 0, size = 0.9 },
+		{ t = 2.5, fx = "Sparks", who = "Victim", part = "Torso", amount = 6, repeatFor = 1.5, every = 0.3 },
+		{ t = 3.0, fx = "Sound", sound = "Fall", volume = 0.6 },
+		{ t = 3.0, fx = "Shake", power = 0.6 },
+		{ t = 3.1, fx = "Voice", line = "Choke" },
+		{ t = 3.6, fx = "Sound", sound = "Gore", volume = 0.6 },
+		{ t = 3.9, fx = "Voice", line = "Choke" },
+		{ t = 4.3, fx = "HitStop", time = 0.07 },
+		{ t = 4.3, fx = "Sound", sound = "Rip" },
+		{ t = 4.3, fx = "Gibs", who = "Victim", part = "Torso", amount = 8 },
+		{ t = 4.3, fx = "Splatter", amount = 5 },
+		{ t = 4.3, fx = "Voice", line = "Gasp" },
+		{ t = 4.6, fx = "Sound", sound = "Fall" },
+		{ t = 4.7, fx = "Pool", who = "Victim", size = 6, time = 1.5 },
 	},
 }

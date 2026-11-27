@@ -2,36 +2,36 @@
 -- Screen and world effects for executions. Moves trigger these from their
 -- Events list, e.g. { t = 1.2, fx = "Shake", power = 1 }.
 --
---   Shake  power            camera shake (only for the killer and victim)
---   Flash  color alpha time quick colour flash on screen
---   Darken amount time      darker, redder picture (0 = normal, 1 = very dark)
---   Blood  who part amount  blood spray from a body part ("Head", "Torso"...)
---   Pool   who size time    black pool growing on the floor under someone
---   Eyes   on               the killer's eyes glow red (on = true / false)
---   Crush  who part         squashes a body part flat (head stomps) with lots of blood
---   Sound  sound            plays a sound from the Sounds list below
+--   Shake    power             camera shake (only for the killer and victim)
+--   Flash    color alpha time  quick colour flash on screen
+--   Darken   amount time       darker, redder picture (0 = normal, 1 = very dark)
+--   Punch    amount            the camera lurches in for a moment (field of view kick)
+--   HitStop  time              the animation freezes for a split second on a big hit
+--   Splatter amount            blood splashes onto the screen and runs down
+--   Blood    who part amount   blood spray from a body part ("Head", "Torso"...)
+--   Gibs     who part amount   bloody chunks flying off a body part
+--   Sparks   who part amount   sparks where the chainsaw hits bone
+--   Smoke    amount            puff of exhaust smoke from the chainsaw
+--   Wound    who part side x y size   a bleeding wound stuck on a body part
+--                              (side = "Front" or "Back", x/y = where on it)
+--   Pool     who size time     black pool growing on the floor under someone
+--   Eyes     on                the killer's eyes glow red (on = true / false)
+--   Crush    who part          squashes a body part flat (head stomps) with lots of blood
+--   Sound    sound volume      plays a sound (names are in Shared/Executions/Sounds)
+--   Voice    line              the victim's voice: "Scream", "Grunt", "Choke", "Gasp"
+--   SawLoop  on                chainsaw running sound on / off
 
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local Debris = game:GetService("Debris")
 
--- Paste sound ids here, like "rbxassetid://1234567890". Find free sounds in
--- Studio: View > Toolbox > Audio. Leave "" for no sound.
-local SOUNDS = {
-	Sting = "", -- horror sting when it starts
-	Grab = "",
-	Snap = "",
-	Bite = "",
-	Drag = "",
-	Rev = "", -- chainsaw starting up
-	Saw = "", -- chainsaw cutting
-	Slash = "", -- chainsaw swing
-	Stomp = "",
-	Crush = "", -- head crushed
-	Rip = "", -- limb torn off
-	Scream = "",
-}
+local Sounds = require(ReplicatedStorage:WaitForChild("Shared").Executions.Sounds)
+
+local SMOKE_TEXTURE = "rbxasset://textures/particles/smoke_main.dds"
+local SPARK_TEXTURE = "rbxasset://textures/particles/sparkles_main.dds"
+local FLESH_COLOR = Color3.fromRGB(120, 20, 20)
 
 local BLOOD_COLOR = Color3.fromRGB(95, 0, 0)
 local EYE_COLOR = Color3.fromRGB(255, 30, 30)
@@ -69,6 +69,8 @@ function Effects.new(involved: boolean, killer: Model, victim: Model)
 	self.Killer = killer
 	self.Victim = victim
 	self.ShakePower = 0
+	self.PunchAmount = 0
+	self.HoldUntil = -1 -- hit-stop: animation time stays frozen until this
 	self.Leftovers = {}
 
 	local params = RaycastParams.new()
@@ -119,6 +121,61 @@ function Effects:_groundBelow(position: Vector3): RaycastResult?
 	return workspace:Raycast(position + Vector3.new(0, 1, 0), Vector3.new(0, -25, 0), self.RayParams)
 end
 
+function Effects:_part(event, default: string): BasePart?
+	local character = self[event.who or "Victim"]
+	local part = character and character:FindFirstChild(event.part or default)
+	if part and part:IsA("BasePart") then
+		return part
+	end
+	return nil
+end
+
+-- A one-off burst of particles at a spot. Built-in Roblox textures only.
+local function burst(position: Vector3, count: number, props)
+	local holder = Instance.new("Attachment")
+	holder.Parent = workspace.Terrain
+	holder.WorldPosition = position
+	local emitter = Instance.new("ParticleEmitter")
+	emitter.Enabled = false
+	emitter.Rate = 0
+	for key, value in props do
+		emitter[key] = value
+	end
+	emitter.Parent = holder
+	emitter:Emit(count)
+	Debris:AddItem(holder, 3)
+end
+
+local function bloodSpray(position: Vector3, amount: number)
+	-- fine mist
+	burst(position, math.ceil(amount * 0.6), {
+		Texture = SMOKE_TEXTURE,
+		Color = ColorSequence.new(Color3.fromRGB(110, 0, 0), Color3.fromRGB(50, 0, 0)),
+		Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.3), NumberSequenceKeypoint.new(1, 1.4) }),
+		Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.35), NumberSequenceKeypoint.new(1, 1) }),
+		Lifetime = NumberRange.new(0.25, 0.6),
+		Speed = NumberRange.new(3, 8),
+		SpreadAngle = Vector2.new(70, 70),
+		Drag = 6,
+		LightInfluence = 1,
+		Rotation = NumberRange.new(0, 360),
+		Acceleration = Vector3.new(0, -10, 0),
+	})
+	-- droplets that arc and fall
+	burst(position, amount * 2, {
+		Texture = SMOKE_TEXTURE,
+		Color = ColorSequence.new(Color3.fromRGB(120, 0, 0)),
+		Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.18), NumberSequenceKeypoint.new(1, 0.06) }),
+		Transparency = NumberSequence.new(0.05),
+		Lifetime = NumberRange.new(0.5, 1),
+		Speed = NumberRange.new(6, 16),
+		SpreadAngle = Vector2.new(55, 55),
+		Acceleration = Vector3.new(0, -workspace.Gravity * 0.35, 0),
+		Drag = 1,
+		LightInfluence = 1,
+	})
+end
+
 local handlers = {}
 
 function handlers.Shake(self, event)
@@ -154,7 +211,8 @@ function handlers.Blood(self, event)
 		return
 	end
 	local origin = part.Position
-	for _ = 1, event.amount or 8 do
+	bloodSpray(origin, event.amount or 8)
+	for _ = 1, math.ceil((event.amount or 8) * 0.6) do
 		local drop = plainPart({
 			Name = "Blood",
 			Shape = Enum.PartType.Ball,
@@ -274,21 +332,220 @@ function handlers.Crush(self, event)
 	handlers.Blood(self, { who = event.who, part = part.Name, amount = event.amount or 30 })
 end
 
-function handlers.Sound(self, event)
-	local id = SOUNDS[event.sound]
-	if not id or id == "" then
+function handlers.Gibs(self, event)
+	local part = self:_part(event, "Torso")
+	if not part then
 		return
 	end
-	local root = self.Victim:FindFirstChild("HumanoidRootPart") or self.Killer:FindFirstChild("HumanoidRootPart")
-	if not root then
+	for _ = 1, event.amount or 6 do
+		local size = 0.15 + math.random() * 0.3
+		local chunk = plainPart({
+			Name = "Gib",
+			Size = Vector3.new(size, size * (0.6 + math.random() * 0.6), size),
+			Color = if math.random() < 0.5 then FLESH_COLOR else BLOOD_COLOR,
+			Material = Enum.Material.Glass,
+			Reflectance = 0.05,
+			CFrame = part.CFrame * CFrame.new((math.random() - 0.5) * 0.8, (math.random() - 0.5) * 0.8, 0)
+				* CFrame.Angles(math.random() * 6, math.random() * 6, math.random() * 6),
+		})
+		chunk.CanCollide = true
+		chunk.Parent = workspace
+		chunk.AssemblyLinearVelocity = Vector3.new(math.random(-10, 10), math.random(6, 16), math.random(-10, 10))
+		chunk.AssemblyAngularVelocity = Vector3.new(math.random(-10, 10), math.random(-10, 10), math.random(-10, 10))
+		Debris:AddItem(chunk, 4)
+	end
+	bloodSpray(part.Position, 10)
+end
+
+function handlers.Sparks(self, event)
+	local part = self:_part(event, "Torso")
+	if not part then
 		return
+	end
+	burst(part.Position, event.amount or 25, {
+		Texture = SPARK_TEXTURE,
+		Color = ColorSequence.new(Color3.fromRGB(255, 220, 120), Color3.fromRGB(255, 90, 20)),
+		Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.18), NumberSequenceKeypoint.new(1, 0) }),
+		LightEmission = 1,
+		Lifetime = NumberRange.new(0.15, 0.45),
+		Speed = NumberRange.new(12, 26),
+		SpreadAngle = Vector2.new(80, 80),
+		Acceleration = Vector3.new(0, -60, 0),
+		Drag = 2,
+	})
+end
+
+function handlers.Smoke(self, event)
+	local engine = self.Killer:FindFirstChild("Engine", true) or self.Killer:FindFirstChild("Right Arm")
+	if not (engine and engine:IsA("BasePart")) then
+		return
+	end
+	burst(engine.Position, event.amount or 12, {
+		Texture = SMOKE_TEXTURE,
+		Color = ColorSequence.new(Color3.fromRGB(90, 90, 90), Color3.fromRGB(40, 40, 40)),
+		Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.4), NumberSequenceKeypoint.new(1, 2.2) }),
+		Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.4), NumberSequenceKeypoint.new(1, 1) }),
+		Lifetime = NumberRange.new(0.8, 1.6),
+		Speed = NumberRange.new(1.5, 4),
+		SpreadAngle = Vector2.new(40, 40),
+		Acceleration = Vector3.new(0, 2, 0),
+		Drag = 2,
+		Rotation = NumberRange.new(0, 360),
+		RotSpeed = NumberRange.new(-60, 60),
+	})
+end
+
+-- A wound stuck to the body: it moves with the body and keeps dripping
+function handlers.Wound(self, event)
+	local part = self:_part(event, "Torso")
+	if not part then
+		return
+	end
+	local size = event.size or 0.7
+	local back = event.side == "Back"
+	local depth = part.Size.Z / 2 + 0.02
+	local spot = part.CFrame
+		* CFrame.new(event.x or 0, event.y or 0, if back then depth else -depth)
+		* CFrame.Angles(0, 0, math.rad(math.random(-30, 30)))
+	local wound = plainPart({
+		Name = "Wound",
+		Size = Vector3.new(size * 0.55, size, 0.04),
+		Color = Color3.fromRGB(40, 0, 0),
+		Material = Enum.Material.Glass,
+		Massless = true,
+		CFrame = spot,
+	})
+	local weld = Instance.new("WeldConstraint")
+	weld.Part0 = part
+	weld.Part1 = wound
+	weld.Parent = wound
+	local drip = Instance.new("ParticleEmitter")
+	drip.Texture = SMOKE_TEXTURE
+	drip.Color = ColorSequence.new(Color3.fromRGB(100, 0, 0))
+	drip.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.12), NumberSequenceKeypoint.new(1, 0.05) })
+	drip.Lifetime = NumberRange.new(0.4, 0.8)
+	drip.Speed = NumberRange.new(0.5, 1.5)
+	drip.SpreadAngle = Vector2.new(20, 20)
+	drip.Acceleration = Vector3.new(0, -30, 0)
+	drip.EmissionDirection = if back then Enum.NormalId.Back else Enum.NormalId.Front
+	drip.Rate = 20
+	drip.LightInfluence = 1
+	drip.Parent = wound
+	task.delay(6, function()
+		drip.Enabled = false
+	end)
+	wound.Parent = part.Parent
+	-- if the body part is hidden (pulled under the floor, cut away), hide the wound too
+	part:GetPropertyChangedSignal("Transparency"):Connect(function()
+		if part.Transparency >= 1 then
+			wound:Destroy()
+		end
+	end)
+end
+
+function handlers.Punch(self, event)
+	self.PunchAmount = math.max(self.PunchAmount, event.amount or 8)
+end
+
+function handlers.HitStop(self, event)
+	self.HoldUntil = math.max(self.HoldUntil, event.t + (event.time or 0.08))
+end
+
+-- Blood splashed onto the screen; it runs down and fades
+function handlers.Splatter(self, event)
+	if not self.Gui then
+		return
+	end
+	for _ = 1, event.amount or 5 do
+		local size = math.random(40, 170)
+		local drop = Instance.new("Frame")
+		drop.BorderSizePixel = 0
+		drop.AnchorPoint = Vector2.new(0.5, 0.5)
+		drop.BackgroundColor3 = Color3.fromRGB(math.random(70, 110), 0, 0)
+		drop.BackgroundTransparency = 0.15
+		drop.Position = UDim2.fromScale(math.random(5, 95) / 100, math.random(10, 80) / 100)
+		drop.Size = UDim2.fromOffset(size, size * (0.8 + math.random() * 0.5))
+		drop.Rotation = math.random(0, 360)
+		local corner = Instance.new("UICorner")
+		corner.CornerRadius = UDim.new(0.5, 0)
+		corner.Parent = drop
+		drop.Parent = self.Gui
+		local life = 1.2 + math.random() * 1.2
+		TweenService:Create(drop, TweenInfo.new(life, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+			BackgroundTransparency = 1,
+			Position = drop.Position + UDim2.fromScale(0, 0.06 + math.random() * 0.08),
+			Size = UDim2.fromOffset(size * 0.8, size * 1.6),
+		}):Play()
+		Debris:AddItem(drop, life + 0.1)
+	end
+end
+
+local function pick(entry)
+	if not entry or #entry[1] == 0 then
+		return nil
+	end
+	return `rbxassetid://{entry[1][math.random(#entry[1])]}`, entry[2] or 1
+end
+
+function Effects:_playSound(entry, parent: Instance, volume: number?, looped: boolean?): Sound?
+	local id, baseVolume = pick(entry)
+	if not id then
+		return nil
 	end
 	local sound = Instance.new("Sound")
 	sound.SoundId = id
-	sound.Volume = event.volume or 1
-	sound.Parent = root
+	sound.Volume = baseVolume * (volume or 1)
+	sound.PlaybackSpeed = 0.93 + math.random() * 0.14
+	sound.RollOffMaxDistance = 120
+	sound.Looped = looped == true
+	sound.Parent = parent
 	sound:Play()
-	Debris:AddItem(sound, 8)
+	if not looped then
+		Debris:AddItem(sound, 10)
+	end
+	return sound
+end
+
+function handlers.Sound(self, event)
+	-- old moves used Sound "Scream": that is a voice line now
+	if not Sounds.Effects[event.sound] and Sounds.Voice.Female[event.sound] then
+		handlers.Voice(self, { line = event.sound, volume = event.volume })
+		return
+	end
+	local part = self:_part(event, "HumanoidRootPart") or self.Killer:FindFirstChild("HumanoidRootPart")
+	if part then
+		self:_playSound(Sounds.Effects[event.sound], part, event.volume)
+	end
+end
+
+-- The victim's voice (Female / Male / Off, picked by the victim player with V)
+function handlers.Voice(self, event)
+	local owner = Players:GetPlayerFromCharacter(self.Victim)
+	local voice = owner and owner:GetAttribute("Voice") or Sounds.DefaultVoice
+	local lines = Sounds.Voice[voice]
+	local head = self.Victim:FindFirstChild("Head") or self.Victim:FindFirstChild("HumanoidRootPart")
+	if lines and head then
+		self:_playSound(lines[event.line], head, event.volume)
+	end
+end
+
+function handlers.SawLoop(self, event)
+	if event.on == false then
+		if self.SawSound then
+			local sound = self.SawSound
+			self.SawSound = nil
+			tween(sound, 0.4, { Volume = 0 })
+			Debris:AddItem(sound, 0.5)
+		end
+		return
+	end
+	if self.SawSound then
+		return
+	end
+	local engine = self.Killer:FindFirstChild("Engine", true) or self.Killer:FindFirstChild("HumanoidRootPart")
+	if engine then
+		self.SawSound = self:_playSound(Sounds.SawLoop, engine, event.volume, true)
+	end
 end
 
 function Effects:Run(event)
@@ -314,6 +571,12 @@ function Effects:CameraShake(dt: number): CFrame
 	return CFrame.new(x * 0.3, y * 0.3, 0) * CFrame.Angles(math.rad(y * 3), math.rad(x * 3), math.rad(roll * 4))
 end
 
+-- Called every frame by the camera: how much to zoom in for a "punch"
+function Effects:CameraFov(dt: number): number
+	self.PunchAmount *= math.exp(-dt * 7)
+	return -self.PunchAmount
+end
+
 function Effects:_removeEyes()
 	if self.EyeParts then
 		for _, eye in self.EyeParts do
@@ -325,6 +588,7 @@ end
 
 function Effects:Destroy()
 	self:_removeEyes()
+	handlers.SawLoop(self, { on = false })
 	if self.Grade then
 		local grade = self.Grade
 		tween(grade, 0.8, { Brightness = 0, Contrast = 0, Saturation = 0, TintColor = Color3.new(1, 1, 1) })
